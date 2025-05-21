@@ -79,15 +79,7 @@ On JVM, JDK 17 or higher is required to use the framework.
         implementation("ai.koog:koog-agents:0.1.0")
     }
     ```
-
-2. Add the address of the Maven repository where the package takes from:
-
-    ```
-    repositories {
-        maven("https://packages.jetbrains.team/maven/p/grazi/grazie-platform-public/")
-    }
-    ```
-
+2. Make sure that you have `mavenCentral()` in the list of repositories.
 ### Gradle (Groovy)
 
 1. Add dependencies to the `build.gradle` file:
@@ -97,17 +89,7 @@ On JVM, JDK 17 or higher is required to use the framework.
         implementation 'ai.koog:koog-agents:0.1.0'
     }
     ```
-
-2. Add the address of the Maven repository where the package takes from:
-
-    ```
-    repositories {
-        maven {
-            url 'https://packages.jetbrains.team/maven/p/grazi/grazie-platform-public/'
-        }
-    }
-    ```
-
+2. Make sure that you have `mavenCentral()` in the list of repositories.
 ### Maven
 
 1. Add dependencies to the `pom.xml` file:
@@ -119,16 +101,7 @@ On JVM, JDK 17 or higher is required to use the framework.
         <version>0.1.0</version>
     </dependency>
     ```
-
-2. Add the address of the Maven repository where the package takes from:
-
-    ```
-    <repository>
-        <id>mavenCustom</id>
-        <url>https://packages.jetbrains.team/maven/p/grazi/grazie-platform-public/</url>
-    </repository>
-    ```
-
+2. Make sure that you have `mavenCentral` in the list of repositories.
 ## Contributing
 Read the [Contributing Guidelines](CONTRIBUTING.md).
 
