@@ -1,4 +1,4 @@
-package ai.jetbrains.code.integration.tests.utils
+package ai.koog.integration.tests.utils
 
 import ai.koog.agents.core.tools.*
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +19,11 @@ internal object TestUtils {
     fun readTestGoogleAIKeyFromEnv(): String {
         return System.getenv("GEMINI_API_TEST_KEY")
             ?: error("ERROR: environment variable `GEMINI_API_TEST_KEY` is not set")
+    }
+
+    fun readTestOpenRouterKeyFromEnv(): String {
+        return System.getenv("OPEN_ROUTER_API_TEST_KEY")
+            ?: error("ERROR: environment variable `OPEN_ROUTER_API_TEST_KEY` is not set")
     }
 
     @Serializable
