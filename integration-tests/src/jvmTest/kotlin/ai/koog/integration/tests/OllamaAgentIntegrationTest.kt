@@ -35,73 +35,90 @@ class OllamaAgentIntegrationTest {
         private val model get() = fixture.model
     }
 
-    private fun createTestStrategy() =
-        strategy("test-ollama") {
-            val askCapitalSubgraph by subgraph<String, String>("ask-capital") {
-                val definePrompt by node<Unit, Unit> {
-                    llm.writeSession {
-                        model = OllamaModels.Meta.LLAMA_3_2
-                        rewritePrompt {
-                            prompt("test-ollama") {
-                                system(
-                                    "You are a helpful assistant. " +
-                                            "You need to answer the question about the capital of France. " +
-                                            "Before answering, use the generic_parameter_tool with a required argument " +
-                                            "'requiredArg' set to 'ask-capital' and an optional argument 'optionalArg' " +
-                                            "if you want. Also, use the geography_query_tool with a required argument " +
-                                            "'query' set to 'capital of France'."
-                                )
-                            }
+    private fun createTestStrategy() = strategy("test-ollama") {
+        val askCapitalSubgraph by subgraph<String, String>("ask-capital") {
+            val definePrompt by node<Unit, Unit> {
+                llm.writeSession {
+                    model = OllamaModels.Meta.LLAMA_3_2
+                    rewritePrompt {
+                        prompt("test-ollama") {
+                            system(
+                                """
+                                        You are a top-tier geographical assistant. " +
+                                            ALWAYS communicate to user via tools!!!
+                                            ALWAYS use tools you've been provided.
+                                            ALWAYS generate valid JSON responses.
+                                            ALWAYS call tool correctly, with valid arguments.
+                                            NEVER provide tool call in result body.
+                                            
+                                            Example tool call:
+                                            {
+                                                "id":"ollama_tool_call_3743609160",
+                                                "tool":"geography_query_tool",
+                                                "content":{"query":"capital of France"}
+                                            }
+                                            """.trimIndent()
+                            )
                         }
                     }
                 }
-
-                val callLLM by nodeLLMRequest(allowToolCalls = true)
-                val callTool by nodeExecuteTool()
-                val sendToolResult by nodeLLMSendToolResult()
-
-                edge(nodeStart forwardTo definePrompt transformed {})
-                edge(definePrompt forwardTo callLLM transformed { agentInput })
-                edge(callLLM forwardTo callTool onToolCall { true })
-                edge(callTool forwardTo sendToolResult)
-                edge(sendToolResult forwardTo callTool onToolCall { true })
-                edge(sendToolResult forwardTo nodeFinish onAssistantMessage { true })
-                edge(callLLM forwardTo nodeFinish onAssistantMessage { true })
             }
 
-            val askVerifyAnswer by subgraph<String, String>("verify-answer") {
-                val definePrompt by node<Unit, Unit> {
-                    llm.writeSession {
-                        model = OllamaModels.Meta.LLAMA_3_2
-                        rewritePrompt {
-                            prompt("test-ollama") {
-                                system(
-                                    "You are a helpful assistant. You need to verify that the answer about " +
-                                            "the capital of France is correct. The correct answer is Paris. " +
-                                            "Before verifying, use the generic_parameter_tool with a required argument " +
-                                            "'requiredArg' set to 'verify-answer' and an optional argument 'optionalArg' " +
-                                            "if you want. Also, use the answer_verification_tool."
-                                )
-                            }
-                        }
-                    }
-                }
+            val callLLM by nodeLLMRequest(allowToolCalls = true)
+            val callTool by nodeExecuteTool()
+            val sendToolResult by nodeLLMSendToolResult()
 
-                val callLLM by nodeLLMRequest(allowToolCalls = true)
-                val callTool by nodeExecuteTool()
-                val sendToolResult by nodeLLMSendToolResult()
-
-                edge(nodeStart forwardTo definePrompt transformed {})
-                edge(definePrompt forwardTo callLLM transformed { agentInput })
-                edge(callLLM forwardTo callTool onToolCall { true })
-                edge(callTool forwardTo sendToolResult)
-                edge(sendToolResult forwardTo callTool onToolCall { true })
-                edge(sendToolResult forwardTo nodeFinish onAssistantMessage { true })
-                edge(callLLM forwardTo nodeFinish onAssistantMessage { true })
-            }
-
-            nodeStart then askCapitalSubgraph then askVerifyAnswer then nodeFinish
+            edge(nodeStart forwardTo definePrompt transformed {})
+            edge(definePrompt forwardTo callLLM transformed { agentInput })
+            edge(callLLM forwardTo callTool onToolCall { true })
+            edge(callTool forwardTo sendToolResult)
+            edge(sendToolResult forwardTo callTool onToolCall { true })
+            edge(sendToolResult forwardTo nodeFinish onAssistantMessage { true })
+            edge(callLLM forwardTo nodeFinish onAssistantMessage { true })
         }
+
+        val askVerifyAnswer by subgraph<String, String>("verify-answer") {
+            val definePrompt by node<Unit, Unit> {
+                llm.writeSession {
+                    model = OllamaModels.Meta.LLAMA_3_2
+                    rewritePrompt {
+                        prompt("test-ollama") {
+                            system(
+                                """"
+                                        You are a top-tier assistant.
+                                        ALWAYS communicate to user via tools!!!
+                                        ALWAYS use tools you've been provided.
+                                        ALWAYS generate valid JSON responses.
+                                        ALWAYS call tool correctly, with valid arguments.
+                                        NEVER provide tool call in result body.
+                                      
+                                        Example tool call:
+                                        {
+                                            "id":"ollama_tool_call_3743609160"
+                                            "tool":"answer_verification_tool"
+                                            "content":{"answer":"Paris"}
+                                        }.""".trimIndent()
+                            )
+                        }
+                    }
+                }
+            }
+
+            val callLLM by nodeLLMRequest(allowToolCalls = true)
+            val callTool by nodeExecuteTool()
+            val sendToolResult by nodeLLMSendToolResult()
+
+            edge(nodeStart forwardTo definePrompt transformed {})
+            edge(definePrompt forwardTo callLLM transformed { agentInput })
+            edge(callLLM forwardTo callTool onToolCall { true })
+            edge(callTool forwardTo sendToolResult)
+            edge(sendToolResult forwardTo callTool onToolCall { true })
+            edge(sendToolResult forwardTo nodeFinish onAssistantMessage { true })
+            edge(callLLM forwardTo nodeFinish onAssistantMessage { true })
+        }
+
+        nodeStart then askCapitalSubgraph then askVerifyAnswer then nodeFinish
+    }
 
 
     private fun createToolRegistry(): ToolRegistry {
@@ -113,9 +130,7 @@ class OllamaAgentIntegrationTest {
     }
 
     private fun createAgent(
-        executor: PromptExecutor,
-        strategy: AIAgentStrategy,
-        toolRegistry: ToolRegistry
+        executor: PromptExecutor, strategy: AIAgentStrategy, toolRegistry: ToolRegistry
     ): AIAgent {
         val promptsAndResponses = mutableListOf<String>()
 
