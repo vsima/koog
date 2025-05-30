@@ -1,5 +1,6 @@
 package ai.koog.prompt.structure.json
 
+import ai.koog.agents.core.tools.annotations.LLMDescription
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.json.*
@@ -65,20 +66,21 @@ public class JsonSchemaGenerator(
      * Generate a JSON schema for a serializable class.
      *
      * @param serializer The serializer for the class
-     * @param descriptions Optional map of serial class names and property names to descriptions
+     * @param descriptionOverrides Optional map of serial class names and property names to descriptions.
+     * If a property/type is already described with [LLMDescription] annotation, value from the map will override this description.
      * @return A JsonObject representing the JSON schema
      */
     public fun generate(
         id: String,
         serializer: KSerializer<*>,
-        descriptions: Map<String, String> = emptyMap()
+        descriptionOverrides: Map<String, String> = emptyMap()
     ): JsonObject {
         val rootSchema: JsonObject
         val definitions = buildJsonObject {
             rootSchema = generatePropertySchema(
                 rootDefsBuilder = this,
                 processedDefs = emptySet(),
-                descriptions = descriptions,
+                descriptionOverrides = descriptionOverrides,
                 descriptor = serializer.descriptor,
                 currentDepth = 0,
             )
@@ -116,7 +118,7 @@ public class JsonSchemaGenerator(
     private fun generatePropertySchema(
         rootDefsBuilder: JsonObjectBuilder,
         processedDefs: Set<String>,
-        descriptions: Map<String, String>,
+        descriptionOverrides: Map<String, String>,
         descriptor: SerialDescriptor,
         currentDepth: Int,
         isPolymorphicSubtype: Boolean = false,
@@ -153,7 +155,7 @@ public class JsonSchemaGenerator(
                         generatePropertySchema(
                             rootDefsBuilder = rootDefsBuilder,
                             processedDefs = processedDefs,
-                            descriptions = descriptions,
+                            descriptionOverrides = descriptionOverrides,
                             descriptor = itemDescriptor,
                             currentDepth = currentDepth + 1,
                         )
@@ -175,7 +177,7 @@ public class JsonSchemaGenerator(
                         generatePropertySchema(
                             rootDefsBuilder = rootDefsBuilder,
                             processedDefs = processedDefs,
-                            descriptions = descriptions,
+                            descriptionOverrides = descriptionOverrides,
                             descriptor = valueDescriptor,
                             currentDepth = currentDepth + 1,
                         )
@@ -202,8 +204,18 @@ public class JsonSchemaGenerator(
                             for (i in 0 until descriptor.elementsCount) {
                                 val propertyName = descriptor.getElementName(i)
                                 val propertyDescriptor = descriptor.getElementDescriptor(i)
+                                val propertyAnnotations = descriptor.getElementAnnotations(i)
+
+                                // Description for a property
                                 val lookupKey = "${descriptor.serialName}.$propertyName"
-                                val propertyDescription = descriptions[lookupKey]
+                                val propertyDescriptionOverride = descriptionOverrides[lookupKey]
+                                val propertyDescriptionAnnotation = propertyAnnotations
+                                    .filterIsInstance<LLMDescription>()
+                                    .firstOrNull()
+                                    ?.description
+
+                                // Look at the explicit map first, then at the annotation
+                                val propertyDescription = propertyDescriptionOverride ?: propertyDescriptionAnnotation
 
                                 put(
                                     propertyName,
@@ -211,7 +223,7 @@ public class JsonSchemaGenerator(
                                         generatePropertySchema(
                                             rootDefsBuilder = rootDefsBuilder,
                                             processedDefs = updatedProcessedDefs,
-                                            descriptions = descriptions,
+                                            descriptionOverrides = descriptionOverrides,
                                             descriptor = propertyDescriptor,
                                             currentDepth = currentDepth + 1,
                                         ).let { propertySchema ->
@@ -243,7 +255,14 @@ public class JsonSchemaGenerator(
                         }
 
                         // Description for a whole type (definition)
-                        val typeDescription = descriptions[descriptor.serialName]
+                        val typeDescriptionOverride = descriptionOverrides[descriptor.serialName]
+                        val typeDescriptionAnnotation = descriptor.annotations
+                            .filterIsInstance<LLMDescription>()
+                            .firstOrNull()
+                            ?.description
+
+                        // Look at the explicit map first, then at the annotation
+                        val typeDescription = typeDescriptionOverride ?: typeDescriptionAnnotation
 
                         // Build type definition
                         val typeDefinition = buildJsonObject {
@@ -276,7 +295,7 @@ public class JsonSchemaGenerator(
                                 generatePropertySchema(
                                     rootDefsBuilder = rootDefsBuilder,
                                     processedDefs = processedDefs,
-                                    descriptions = descriptions,
+                                    descriptionOverrides = descriptionOverrides,
                                     descriptor = polymorphicDescriptor,
                                     currentDepth = currentDepth + 1,
                                     isPolymorphicSubtype = true,
