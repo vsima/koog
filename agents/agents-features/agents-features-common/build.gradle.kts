@@ -33,6 +33,12 @@ kotlin {
             }
         }
 
+        iosMain {
+            dependencies {
+                api(libs.ktor.client.darwin)
+            }
+        }
+
         commonTest {
             dependencies {
                 implementation(kotlin("test"))

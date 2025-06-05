@@ -15,6 +15,8 @@ pluginManagement {
     }
 }
 
+includeBuild("../kotlin-sdk")
+
 include(":agents:agents-core")
 include(":agents:agents-ext")
 
