@@ -25,6 +25,10 @@ kotlin {
 
         configureTests()
     }
+    
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
 }
 
 configureJvmJarManifest("jvmJar")

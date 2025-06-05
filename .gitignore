@@ -4,3 +4,32 @@
 build
 **/.claude/settings.local.json
 env.properties
+
+# Local configuration files
+local.properties
+
+# Kotlin/JS build artifacts
+kotlin-js-store/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Native build artifacts
+**/bin/**/*.exe
+**/bin/**/*.kexe
+**/bin/**/test
+**/bin/**/debugTest
+**/bin/**/releaseTest
+
+# But keep configuration files
+!**/bin/**/*.properties
+!**/bin/**/*.conf
+!**/bin/**/*.json
+
+# Kotlin/Native compilation cache
+.konan/
+
+# OS specific files
+.DS_Store
+Thumbs.db
